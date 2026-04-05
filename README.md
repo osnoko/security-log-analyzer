@@ -95,7 +95,7 @@ python log_analyzer.py combined_logs.txt -o combined_report.html
 
 > *Open `report.html` in a browser after running to see the live dashboard.*
 
-![Report Dashboard](screenshot.png)
+![Report Dashboard](screenshot.PNG)
 
 ---
 
