@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Log Analysis Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a0e1a; color: #c9d1e0; min-height: 100vh;
+        }
+        /* ── Header ── */
+        .hdr {
+            background: linear-gradient(135deg, #0d1117 0%, #161b27 60%, #0d1117 100%);
+            border-bottom: 1px solid #21262d;
+            padding: 20px 40px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .hdr-left { display: flex; align-items: center; gap: 14px; }
+        .hdr-icon {
+            width: 46px; height: 46px;
+            background: linear-gradient(135deg, #ef4444, #a855f7);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; flex-shrink: 0;
+        }
+        .hdr h1 { font-size: 1.35rem; font-weight: 700; color: #e6edf3; letter-spacing: -.02em; }
+        .hdr-sub { font-size: .75rem; color: #7d8590; margin-top: 2px; }
+        .hdr-meta { text-align: right; font-size: .76rem; color: #7d8590; line-height: 1.7; }
+        .hdr-meta strong { color: #c9d1e0; }
+        /* ── Risk Banner ── */
+        .risk-banner {
+            padding: 12px 40px; display: flex; align-items: center; gap: 10px;
+            font-size: .85rem;
+        }
+        .risk-badge {
+            padding: 3px 11px; border-radius: 4px;
+            font-weight: 700; font-size: .78rem; letter-spacing: .06em; color: #fff;
+        }
+        /* ── Container ── */
+        .wrap { max-width: 1440px; margin: 0 auto; padding: 28px 40px; }
+        /* ── Metric Cards ── */
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 14px; margin-bottom: 28px; }
+        .card {
+            background: #161b27; border: 1px solid #21262d; border-radius: 10px;
+            padding: 18px 20px; position: relative; overflow: hidden;
+            transition: border-color .15s;
+        }
+        .card:hover { border-color: #30363d; }
+        .card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: var(--ac); }
+        .card-lbl { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: #7d8590; margin-bottom: 6px; }
+        .card-val { font-size: 2rem; font-weight: 700; color: var(--ac); line-height: 1; }
+        .card-desc { font-size: .7rem; color: #7d8590; margin-top: 5px; }
+        /* ── Charts ── */
+        .charts { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 28px; }
+        @media(max-width:1100px) { .charts { grid-template-columns: 1fr 1fr; } }
+        @media(max-width:700px)  { .charts { grid-template-columns: 1fr; } }
+        .chart-box {
+            background: #161b27; border: 1px solid #21262d; border-radius: 10px; padding: 18px;
+        }
+        .chart-box.span-full { grid-column: 1 / -1; }
+        .chart-lbl { font-size: .7rem; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 14px; }
+        .ch { position: relative; height: 200px; }
+        /* ── Table wrapper ── */
+        .tbl-card {
+            background: #161b27; border: 1px solid #21262d;
+            border-radius: 10px; overflow: hidden; margin-bottom: 28px;
+        }
+        .tbl-hdr {
+            padding: 14px 18px; border-bottom: 1px solid #21262d;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .tbl-title { font-size: .88rem; font-weight: 600; color: #e6edf3; }
+        .tbl-count {
+            background: #21262d; padding: 2px 9px;
+            border-radius: 20px; font-size: .72rem; color: #8b949e;
+        }
+        .tbl-scroll { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+        thead th {
+            background: #0d1117; padding: 9px 14px; text-align: left;
+            font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+            color: #7d8590; font-weight: 600; white-space: nowrap;
+        }
+        tbody tr { border-bottom: 1px solid #0d1117; transition: background .1s; }
+        tbody tr:hover { background: #1c2333; }
+        tbody td { padding: 9px 14px; vertical-align: top; }
+        td.ts  { font-family: monospace; font-size: .75rem; color: #8b949e; white-space: nowrap; }
+        td.ip  { font-family: monospace; color: #79c0ff; white-space: nowrap; }
+        td.rnk { font-weight: 700; color: #7d8590; width: 36px; }
+        td.ev  { font-size: .72rem; color: #8b949e; font-family: monospace; }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: .67rem; font-weight: 700; letter-spacing: .06em; color: #fff;
+        }
+        /* ── Score bar ── */
+        .sbar { display: flex; align-items: center; gap: 7px; min-width: 110px; }
+        .sbar-fill { height: 5px; border-radius: 3px; min-width: 3px; }
+        .sbar-val { font-size: .72rem; color: #8b949e; white-space: nowrap; }
+        /* ── Filter ── */
+        .filters {
+            padding: 10px 18px; border-bottom: 1px solid #21262d;
+            display: flex; gap: 7px; flex-wrap: wrap; align-items: center;
+        }
+        .f-lbl { font-size: .7rem; color: #7d8590; margin-right: 2px; }
+        .fbtn {
+            background: transparent; border: 1px solid #30363d; color: #8b949e;
+            padding: 3px 11px; border-radius: 20px; font-size: .72rem;
+            cursor: pointer; transition: all .15s;
+        }
+        .fbtn:hover { color: #c9d1e0; border-color: #484f58; }
+        .fbtn.on-all      { color: #e6edf3;  border-color: #e6edf3;  background: #e6edf31a; }
+        .fbtn.on-critical { color: #a855f7;  border-color: #a855f7;  background: #a855f71a; }
+        .fbtn.on-high     { color: #ef4444;  border-color: #ef4444;  background: #ef44441a; }
+        .fbtn.on-medium   { color: #f59e0b;  border-color: #f59e0b;  background: #f59e0b1a; }
+        .fbtn.on-low      { color: #3b82f6;  border-color: #3b82f6;  background: #3b82f61a; }
+        /* ── Footer ── */
+        footer { text-align: center; padding: 28px; color: #484f58; font-size: .72rem; border-top: 1px solid #21262d; }
+        .empty { padding: 40px; text-align: center; color: #484f58; }
+
+.risk-banner { background: linear-gradient(90deg, #a855f71a, transparent); border-left: 4px solid #a855f7; }
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-icon">&#x1F6E1;</div>
+    <div>
+      <h1>Security Log Analysis Report</h1>
+      <div class="hdr-sub">Automated Threat Detection &amp; Intelligence Platform</div>
+    </div>
+  </div>
+  <div class="hdr-meta">
+    <div><strong>Analyst:</strong> Chukwuebuka Okonkwo</div>
+    <div style="color:#8b949e;font-size:.72rem;">Security Analyst &nbsp;|&nbsp; CompTIA Security+ &nbsp;|&nbsp; ISC2 CC</div>
+    <div><a href="https://github.com/osnoko" target="_blank" rel="noopener" style="color:#79c0ff;text-decoration:none;">&#x1F517; github.com/osnoko</a></div>
+    <div style="margin-top:4px;padding-top:4px;border-top:1px solid #21262d;"><strong>Source:</strong> sample_logs.txt</div>
+    <div><strong>Generated:</strong> 2026-04-04 21:14:49</div>
+    <div><strong>Log Entries Parsed:</strong> 88</div>
+  </div>
+</header>
+
+<div class="risk-banner">
+  <span class="risk-badge" style="background:#a855f7">CRITICAL</span>
+  <span>Overall Risk Level &mdash; <strong>16</strong> threat indicator(s) across <strong>88</strong> log entries</span>
+</div>
+
+<div class="wrap">
+
+  <!-- ── Metric Cards ── -->
+  <div class="metrics">
+    <div class="card" style="--ac:#e6edf3"><div class="card-lbl">Total Findings</div><div class="card-val" style="color:#e6edf3">16</div><div class="card-desc">Security events detected</div></div>
+    <div class="card" style="--ac:#a855f7"><div class="card-lbl">Critical</div><div class="card-val">1</div><div class="card-desc">Immediate response required</div></div>
+    <div class="card" style="--ac:#ef4444"><div class="card-lbl">High</div><div class="card-val">7</div><div class="card-desc">Investigate promptly</div></div>
+    <div class="card" style="--ac:#f59e0b"><div class="card-lbl">Medium</div><div class="card-val">8</div><div class="card-desc">Monitor and review</div></div>
+    <div class="card" style="--ac:#3b82f6"><div class="card-lbl">Low</div><div class="card-val">0</div><div class="card-desc">Informational</div></div>
+    <div class="card" style="--ac:#22c55e"><div class="card-lbl">Log Entries</div><div class="card-val" style="color:#22c55e">88</div><div class="card-desc">Total events parsed</div></div>
+  </div>
+
+  <!-- ── Charts ── -->
+  <div class="charts">
+    <div class="chart-box span-full">
+      <div class="chart-lbl">&#x1F4C8; Event &amp; Threat Timeline</div>
+      <div class="ch" style="height:180px"><canvas id="cTL"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-lbl">&#x26A0;&#xFE0F; Severity Distribution</div>
+      <div class="ch"><canvas id="cSEV"></canvas></div>
+    </div>
+    <div class="chart-box" style="grid-column:span 2">
+      <div class="chart-lbl">&#x1F4CB; Threat Categories</div>
+      <div class="ch"><canvas id="cTH"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── Top IPs ── -->
+  <div class="tbl-card">
+    <div class="tbl-hdr">
+      <span class="tbl-title">&#x1F3AF; Top Suspicious IP Addresses</span>
+      <span class="tbl-count">10 IPs</span>
+    </div>
+    <div class="tbl-scroll"><table><thead><tr><th>#</th><th>IP Address</th><th>Findings</th><th>Max Severity</th><th>Threat Types</th><th>Risk Score</th></tr></thead><tbody><tr><td class='rnk'>#1</td><td class='ip'>91.108.56.22</td><td>2</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td style='font-size:.75rem;color:#8b949e'>Admin Panel Probing, Web Attack: Path Traversal</td><td><div class='sbar'><div class='sbar-fill' style='width:23%;max-width:80px;background:#ef4444'></div><span class='sbar-val'>70</span></div></td></tr><tr><td class='rnk'>#2</td><td class='ip'>45.33.32.156</td><td>2</td><td><span class='badge' style='background:#a855f7'>CRITICAL</span></td><td style='font-size:.75rem;color:#8b949e'>Brute Force Attack, Off-Hours Access</td><td><div class='sbar'><div class='sbar-fill' style='width:23%;max-width:80px;background:#a855f7'></div><span class='sbar-val'>69</span></div></td></tr><tr><td class='rnk'>#3</td><td class='ip'>185.220.101.34</td><td>2</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td style='font-size:.75rem;color:#8b949e'>Malicious Scanner / Tool, Web Attack: SQL Injection</td><td><div class='sbar'><div class='sbar-fill' style='width:21%;max-width:80px;background:#ef4444'></div><span class='sbar-val'>62</span></div></td></tr><tr><td class='rnk'>#4</td><td class='ip'>172.16.254.1</td><td>2</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td style='font-size:.75rem;color:#8b949e'>Admin Panel Probing, Malicious Scanner / Tool</td><td><div class='sbar'><div class='sbar-fill' style='width:16%;max-width:80px;background:#f59e0b'></div><span class='sbar-val'>49</span></div></td></tr><tr><td class='rnk'>#5</td><td class='ip'>104.21.45.67</td><td>1</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td style='font-size:.75rem;color:#8b949e'>Port Scan Detected</td><td><div class='sbar'><div class='sbar-fill' style='width:14%;max-width:80px;background:#ef4444'></div><span class='sbar-val'>43</span></div></td></tr><tr><td class='rnk'>#6</td><td class='ip'>198.51.100.200</td><td>1</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td style='font-size:.75rem;color:#8b949e'>Brute Force Attack</td><td><div class='sbar'><div class='sbar-fill' style='width:12%;max-width:80px;background:#ef4444'></div><span class='sbar-val'>37</span></div></td></tr><tr><td class='rnk'>#7</td><td class='ip'>203.0.113.88</td><td>1</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td style='font-size:.75rem;color:#8b949e'>Brute Force Attack</td><td><div class='sbar'><div class='sbar-fill' style='width:12%;max-width:80px;background:#ef4444'></div><span class='sbar-val'>37</span></div></td></tr><tr><td class='rnk'>#8</td><td class='ip'>10.10.1.45</td><td>1</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td style='font-size:.75rem;color:#8b949e'>Privilege Escalation Attempt</td><td><div class='sbar'><div class='sbar-fill' style='width:7%;max-width:80px;background:#f59e0b'></div><span class='sbar-val'>20</span></div></td></tr><tr><td class='rnk'>#9</td><td class='ip'>198.51.100.77</td><td>1</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td style='font-size:.75rem;color:#8b949e'>Off-Hours Access</td><td><div class='sbar'><div class='sbar-fill' style='width:7%;max-width:80px;background:#f59e0b'></div><span class='sbar-val'>20</span></div></td></tr><tr><td class='rnk'>#10</td><td class='ip'>185.220.101.100</td><td>1</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td style='font-size:.75rem;color:#8b949e'>Off-Hours Access</td><td><div class='sbar'><div class='sbar-fill' style='width:7%;max-width:80px;background:#f59e0b'></div><span class='sbar-val'>20</span></div></td></tr></tbody></table></div>
+  </div>
+
+  <!-- ── Detailed Findings ── -->
+  <div class="tbl-card">
+    <div class="tbl-hdr">
+      <span class="tbl-title">&#x1F50D; Detailed Threat Findings</span>
+      <span class="tbl-count">16 findings</span>
+    </div>
+    <div class="filters">
+      <span class="f-lbl">Filter:</span>
+      <button class="fbtn on-all"      onclick="filt('all',this)">All (16)</button>
+      <button class="fbtn"             onclick="filt('CRITICAL',this)">Critical (1)</button>
+      <button class="fbtn"             onclick="filt('HIGH',this)">High (7)</button>
+      <button class="fbtn"             onclick="filt('MEDIUM',this)">Medium (8)</button>
+      <button class="fbtn"             onclick="filt('LOW',this)">Low (0)</button>
+    </div>
+    <div class="tbl-scroll"><table id='ft'><thead><tr><th>Timestamp</th><th>Source IP</th><th>Threat Type</th><th>Severity</th><th>Description</th><th>Evidence</th></tr></thead><tbody><tr data-sev='CRITICAL'><td class='ts'>2026-04-01 23:42:01</td><td class='ip'>45.33.32.156</td><td>Brute Force Attack</td><td><span class='badge' style='background:#a855f7'>CRITICAL</span></td><td>9 failed login attempts in &lt;=5 min - SUCCESSFUL LOGIN FOLLOWED (possible compromise)</td><td class='ev'>Attempts in window: 9<br>Targeted accounts: admin, administrator, root<br>Time of first attempt: 2026-04-01 23:42:01<br>Post-attack login detected - credentials likely compromised</td></tr><tr data-sev='HIGH'><td class='ts'>2026-04-01 11:22:01</td><td class='ip'>N/A</td><td>Privilege Escalation Attempt</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td>User &#x27;www-data&#x27; attempted sudo but is NOT in sudoers (2 attempt(s))</td><td class='ev'>Event types: SUDO_NOT_IN_SUDOERS<br>Occurrences: 2</td></tr><tr data-sev='HIGH'><td class='ts'>2026-04-01 13:22:03</td><td class='ip'>185.220.101.34</td><td>Web Attack: SQL Injection</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td>5 SQL Injection attempt(s) detected in HTTP request paths</td><td class='ev'>Sample: /products?id=1+UNION+SELECT+null,table_name,null+FROM+information_schema.tables--<br>Attempts: 5</td></tr><tr data-sev='HIGH'><td class='ts'>2026-04-01 15:30:01</td><td class='ip'>91.108.56.22</td><td>Web Attack: Path Traversal</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td>4 Path Traversal attempt(s) detected in HTTP request paths</td><td class='ev'>Sample: /download?file=../../../etc/passwd<br>Attempts: 4</td></tr><tr data-sev='HIGH'><td class='ts'>2026-04-01 15:30:10</td><td class='ip'>91.108.56.22</td><td>Admin Panel Probing</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td>Attempted access to 6 admin/management path(s)</td><td class='ev'>Paths: /admin, /phpmyadmin, /wp-admin, /administrator, /manager/html, /cpanel<br>Total requests: 6</td></tr><tr data-sev='HIGH'><td class='ts'>2026-04-01 17:33:01</td><td class='ip'>198.51.100.200</td><td>Brute Force Attack</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td>7 failed login attempts in &lt;=5 min</td><td class='ev'>Attempts in window: 7<br>Targeted accounts: Administrator, admin, administrator, backup, root, superuser, sysadmin<br>Time of first attempt: 2026-04-01 17:33:01</td></tr><tr data-sev='HIGH'><td class='ts'>2026-04-01 19:00:01</td><td class='ip'>104.21.45.67</td><td>Port Scan Detected</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td>Probed 13 unique ports in &lt;=2 min (Windows Firewall EventID 5156)</td><td class='ev'>Ports: 21, 22, 23, 25, 80, 443, 3306, 3389, 5432, 6379, 8080, 8443, 27017<br>Events in window: 13<br>Scan started: 2026-04-01 19:00:01</td></tr><tr data-sev='HIGH'><td class='ts'>2026-04-02 08:11:01</td><td class='ip'>203.0.113.88</td><td>Brute Force Attack</td><td><span class='badge' style='background:#ef4444'>HIGH</span></td><td>7 failed login attempts in &lt;=5 min</td><td class='ev'>Attempts in window: 7<br>Targeted accounts: ansible, deploy, git, mysql, oracle, postgres, ubuntu<br>Time of first attempt: 2026-04-02 08:11:01</td></tr><tr data-sev='MEDIUM'><td class='ts'>2026-04-01 13:22:01</td><td class='ip'>185.220.101.34</td><td>Malicious Scanner / Tool</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td>Tool signature &#x27;sqlmap&#x27; detected in 7 request(s)</td><td class='ev'>User-Agent: sqlmap/1.7.8#stable (https://sqlmap.org)<br>Requests: 7<br>Paths sampled: /search?q=1&#x27;+OR+&#x27;1&#x27;%3D&#x27;1, /login?user=admin&#x27;+--+-, /products?id=1+UNION+SELECT+null,table_name,null+FROM+information_schema.tables--, /api/users?id=1;DROP+TABLE+users--, /page?id=1+AND+SLEEP(5)--, /items?id=1+AND+1=1</td></tr><tr data-sev='MEDIUM'><td class='ts'>2026-04-01 14:05:44</td><td class='ip'>N/A</td><td>Privilege Escalation Attempt</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td>1 sudo authentication failure(s) for user &#x27;apache&#x27;</td><td class='ev'>Event types: SUDO_FAILED<br>Occurrences: 1</td></tr><tr data-sev='MEDIUM'><td class='ts'>2026-04-01 14:45:11</td><td class='ip'>172.16.254.1</td><td>Malicious Scanner / Tool</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td>Tool signature &#x27;nikto&#x27; detected in 7 request(s)</td><td class='ev'>User-Agent: Mozilla/5.00 (Nikto/2.1.6) (Evasions:None) (Test:001425)<br>Requests: 7<br>Paths sampled: /cgi-bin/test.cgi, /.git/config, /phpinfo.php, /wp-login.php, /admin/config.php, /server-status</td></tr><tr data-sev='MEDIUM'><td class='ts'>2026-04-01 14:45:14</td><td class='ip'>172.16.254.1</td><td>Admin Panel Probing</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td>Attempted access to 2 admin/management path(s)</td><td class='ev'>Paths: /wp-login.php, /admin/config.php<br>Total requests: 2</td></tr><tr data-sev='MEDIUM'><td class='ts'>2026-04-01 17:45:22</td><td class='ip'>10.10.1.45</td><td>Privilege Escalation Attempt</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td>Windows special privilege assigned to &#x27;tempuser&#x27; (EventID 4672)</td><td class='ev'>EventIDs: 4672, 4673<br>Computer: DC01</td></tr><tr data-sev='MEDIUM'><td class='ts'>2026-04-01 23:42:20</td><td class='ip'>45.33.32.156</td><td>Off-Hours Access</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td>1 successful login(s) during off-hours (23:00-05:00) as root</td><td class='ev'>Login times: 23:42<br>Users: root<br>Source: 45.33.32.156</td></tr><tr data-sev='MEDIUM'><td class='ts'>2026-04-02 01:15:33</td><td class='ip'>198.51.100.77</td><td>Off-Hours Access</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td>2 successful login(s) during off-hours (23:00-05:00) as alice, dbadmin</td><td class='ev'>Login times: 01:15, 03:44<br>Users: alice, dbadmin<br>Source: 198.51.100.77</td></tr><tr data-sev='MEDIUM'><td class='ts'>2026-04-02 02:30:15</td><td class='ip'>185.220.101.100</td><td>Off-Hours Access</td><td><span class='badge' style='background:#f59e0b'>MEDIUM</span></td><td>1 successful login(s) during off-hours (23:00-05:00) as helpdesk</td><td class='ev'>Login times: 02:30<br>Users: helpdesk<br>Source: 185.220.101.100</td></tr></tbody></table></div>
+  </div>
+
+</div>
+
+<footer>
+  Built by <strong style="color:#c9d1e0;">Chukwuebuka Okonkwo</strong> using Claude Code
+  &nbsp;&bull;&nbsp;
+  <a href="https://github.com/osnoko" target="_blank" rel="noopener" style="color:#79c0ff;text-decoration:none;">github.com/osnoko</a>
+  &nbsp;&bull;&nbsp;
+  Hamilton, Ontario, Canada
+  <br>
+  <span style="color:#30363d;">Security Log Analyzer &bull; Generated 2026-04-04 21:14:49 &bull; For authorized security analysis only</span>
+</footer>
+
+<script>
+Chart.defaults.color = '#7d8590';
+Chart.defaults.borderColor = '#21262d';
+
+// Timeline
+new Chart(document.getElementById('cTL'), {
+  type: 'bar',
+  data: {
+    labels: ["04-01 08:00", "04-01 09:00", "04-01 10:00", "04-01 11:00", "04-01 13:00", "04-01 14:00", "04-01 15:00", "04-01 16:00", "04-01 17:00", "04-01 18:00", "04-01 19:00", "04-01 23:00", "04-02 01:00", "04-02 02:00", "04-02 03:00", "04-02 08:00"],
+    datasets: [
+      { label:'All Events', data:[6, 4, 2, 3, 7, 10, 10, 1, 10, 2, 13, 10, 1, 1, 1, 7], backgroundColor:'#1f6feb33', borderColor:'#1f6feb', borderWidth:1, order:2 },
+      { label:'Threats',    data:[0, 0, 0, 1, 2, 3, 2, 0, 2, 0, 1, 2, 1, 1, 0, 1], type:'line', tension:0.35,
+         backgroundColor:'#ef444433', borderColor:'#ef4444', borderWidth:2,
+         pointRadius:3, pointHoverRadius:5, fill:true, order:1 }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:'index', intersect:false },
+    plugins:{ legend:{ labels:{ boxWidth:11, font:{ size:11 } } } },
+    scales:{
+      x:{ grid:{ color:'#21262d' }, ticks:{ font:{ size:9 }, maxTicksLimit:24 } },
+      y:{ grid:{ color:'#21262d' }, beginAtZero:true, ticks:{ precision:0 } }
+    }
+  }
+});
+
+// Severity doughnut
+new Chart(document.getElementById('cSEV'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Critical','High','Medium','Low'],
+    datasets: [{
+      data: [1, 7, 8, 0],
+      backgroundColor: ['#a855f7','#ef4444','#f59e0b','#3b82f6'],
+      borderColor: '#161b27', borderWidth: 3, hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false, cutout:'62%',
+    plugins:{ legend:{ position:'right', labels:{ boxWidth:11, padding:10, font:{ size:11 } } } }
+  }
+});
+
+// Threat categories
+new Chart(document.getElementById('cTH'), {
+  type: 'bar',
+  data: {
+    labels: ["Brute Force Attack", "Privilege Escalation Attempt", "Off-Hours Access", "Admin Panel Probing", "Malicious Scanner / Tool", "Web Attack: SQL Injection", "Web Attack: Path Traversal", "Port Scan Detected"],
+    datasets: [{
+      label: 'Count', data: [3, 3, 3, 2, 2, 1, 1, 1],
+      backgroundColor: ['#a855f7aa','#ef4444aa','#f59e0baa','#3b82f6aa','#22c55eaa','#06b6d4aa','#ec4899aa','#84cc16aa'],
+      borderColor:     ['#a855f7',  '#ef4444',  '#f59e0b',  '#3b82f6',  '#22c55e',  '#06b6d4',  '#ec4899',  '#84cc16'],
+      borderWidth: 1, borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false } },
+    scales:{
+      x:{ grid:{ color:'#21262d' }, beginAtZero:true, ticks:{ precision:0 } },
+      y:{ grid:{ color:'#21262d' }, ticks:{ font:{ size:10 } } }
+    }
+  }
+});
+
+// Filter table
+function filt(sev, btn) {
+  document.querySelectorAll('.fbtn').forEach(b => {
+    b.className = 'fbtn';
+  });
+  const cls = sev === 'all' ? 'on-all'
+    : sev === 'CRITICAL' ? 'on-critical'
+    : sev === 'HIGH'     ? 'on-high'
+    : sev === 'MEDIUM'   ? 'on-medium'
+    : 'on-low';
+  btn.classList.add(cls);
+  document.querySelectorAll('#ft tbody tr').forEach(r => {
+    r.style.display = (sev === 'all' || r.dataset.sev === sev) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

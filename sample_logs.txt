@@ -1,0 +1,129 @@
+# =============================================================================
+# Security Log Analyzer — Sample Log File
+# Demonstrates detection across Windows Event Logs, Linux auth.log,
+# and Apache access logs. Contains realistic attack scenarios.
+# =============================================================================
+
+# ─── Linux auth.log / SSH entries ─────────────────────────────────────────────
+
+# [NORMAL] Legitimate business-hours logins
+Apr  1 08:12:04 prod-web-01 sshd[4421]: Accepted password for alice from 10.10.1.20 port 51023 ssh2
+Apr  1 08:22:15 prod-web-01 sshd[4455]: Accepted password for bob from 10.10.1.21 port 52011 ssh2
+Apr  1 09:00:44 prod-web-01 sshd[4501]: Accepted password for devops from 10.10.1.5 port 49882 ssh2
+Apr  1 10:15:03 prod-web-01 sshd[4680]: Accepted publickey for deploy from 10.10.1.8 port 60211 ssh2
+Apr  1 14:35:11 prod-web-01 sshd[5102]: Accepted password for alice from 10.10.1.20 port 53201 ssh2
+Apr  1 16:47:33 prod-web-01 sshd[5444]: Accepted password for devops from 10.10.1.5 port 55123 ssh2
+
+# [SCENARIO 1 — CRITICAL] Brute force attack from 45.33.32.156 — then root compromise
+Apr  1 23:42:01 prod-web-01 sshd[7001]: Failed password for root from 45.33.32.156 port 43211 ssh2
+Apr  1 23:42:03 prod-web-01 sshd[7002]: Failed password for root from 45.33.32.156 port 43212 ssh2
+Apr  1 23:42:05 prod-web-01 sshd[7003]: Failed password for root from 45.33.32.156 port 43213 ssh2
+Apr  1 23:42:07 prod-web-01 sshd[7004]: Failed password for invalid user admin from 45.33.32.156 port 43214 ssh2
+Apr  1 23:42:09 prod-web-01 sshd[7005]: Failed password for invalid user administrator from 45.33.32.156 port 43215 ssh2
+Apr  1 23:42:11 prod-web-01 sshd[7006]: Failed password for root from 45.33.32.156 port 43216 ssh2
+Apr  1 23:42:13 prod-web-01 sshd[7007]: Failed password for root from 45.33.32.156 port 43217 ssh2
+Apr  1 23:42:15 prod-web-01 sshd[7008]: Failed password for root from 45.33.32.156 port 43218 ssh2
+Apr  1 23:42:17 prod-web-01 sshd[7009]: Failed password for root from 45.33.32.156 port 43219 ssh2
+Apr  1 23:42:20 prod-web-01 sshd[7010]: Accepted password for root from 45.33.32.156 port 43220 ssh2
+
+# [SCENARIO 2 — HIGH] Brute force (no success) from 203.0.113.88
+Apr  2 08:11:01 prod-web-01 sshd[9001]: Failed password for invalid user oracle from 203.0.113.88 port 11001 ssh2
+Apr  2 08:11:03 prod-web-01 sshd[9002]: Failed password for invalid user postgres from 203.0.113.88 port 11002 ssh2
+Apr  2 08:11:05 prod-web-01 sshd[9003]: Failed password for invalid user mysql from 203.0.113.88 port 11003 ssh2
+Apr  2 08:11:07 prod-web-01 sshd[9004]: Failed password for invalid user ubuntu from 203.0.113.88 port 11004 ssh2
+Apr  2 08:11:09 prod-web-01 sshd[9005]: Failed password for invalid user deploy from 203.0.113.88 port 11005 ssh2
+Apr  2 08:11:11 prod-web-01 sshd[9006]: Failed password for invalid user git from 203.0.113.88 port 11006 ssh2
+Apr  2 08:11:13 prod-web-01 sshd[9007]: Failed password for invalid user ansible from 203.0.113.88 port 11007 ssh2
+
+# [SCENARIO 3 — MEDIUM] Off-hours successful logins from suspicious external IP
+Apr  2 01:15:33 prod-web-01 sshd[8001]: Accepted password for alice from 198.51.100.77 port 54400 ssh2
+Apr  2 03:44:22 prod-db-01 sshd[8212]: Accepted password for dbadmin from 198.51.100.77 port 58800 ssh2
+
+# [SCENARIO 4 — HIGH] Privilege escalation — www-data not in sudoers
+Apr  1 11:22:01 prod-web-01 sudo: www-data : user NOT in sudoers ; TTY=pts/2 ; PWD=/var/www/html ; USER=root ; COMMAND=/bin/bash
+Apr  1 11:22:15 prod-web-01 sudo: www-data : user NOT in sudoers ; TTY=pts/2 ; PWD=/var/www/html ; USER=root ; COMMAND=/usr/bin/id
+Apr  1 14:05:44 prod-web-01 sudo:    apache : 3 incorrect password attempts ; TTY=pts/3 ; PWD=/etc ; USER=root ; COMMAND=/bin/cat /etc/shadow
+
+# ─── Apache Access Log entries ────────────────────────────────────────────────
+
+# [NORMAL] Regular web traffic
+192.168.1.100 - - [01/Apr/2026:08:30:12 +0000] "GET /index.html HTTP/1.1" 200 5120 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/123"
+192.168.1.100 - - [01/Apr/2026:08:30:15 +0000] "GET /about.html HTTP/1.1" 200 3200 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/123"
+10.10.1.50 - - [01/Apr/2026:09:45:22 +0000] "POST /api/login HTTP/1.1" 200 450 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+10.10.1.51 - - [01/Apr/2026:10:15:33 +0000] "GET /dashboard HTTP/1.1" 200 8900 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+10.10.1.52 - - [01/Apr/2026:11:00:01 +0000] "GET /products HTTP/1.1" 200 12400 "-" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"
+10.10.1.53 - - [01/Apr/2026:14:22:44 +0000] "GET /contact HTTP/1.1" 200 2900 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+
+# [SCENARIO 5 — CRITICAL] SQLMap automated SQL injection scanning
+185.220.101.34 - - [01/Apr/2026:13:22:01 +0000] "GET /search?q=1'+OR+'1'%3D'1 HTTP/1.1" 500 287 "-" "sqlmap/1.7.8#stable (https://sqlmap.org)"
+185.220.101.34 - - [01/Apr/2026:13:22:02 +0000] "GET /login?user=admin'+--+- HTTP/1.1" 200 1243 "-" "sqlmap/1.7.8#stable (https://sqlmap.org)"
+185.220.101.34 - - [01/Apr/2026:13:22:03 +0000] "GET /products?id=1+UNION+SELECT+null,table_name,null+FROM+information_schema.tables-- HTTP/1.1" 500 287 "-" "sqlmap/1.7.8#stable (https://sqlmap.org)"
+185.220.101.34 - - [01/Apr/2026:13:22:04 +0000] "GET /api/users?id=1;DROP+TABLE+users-- HTTP/1.1" 500 287 "-" "sqlmap/1.7.8#stable (https://sqlmap.org)"
+185.220.101.34 - - [01/Apr/2026:13:22:05 +0000] "GET /page?id=1+AND+SLEEP(5)-- HTTP/1.1" 200 5120 "-" "sqlmap/1.7.8#stable (https://sqlmap.org)"
+185.220.101.34 - - [01/Apr/2026:13:22:06 +0000] "GET /items?id=1+AND+1=1 HTTP/1.1" 200 5120 "-" "sqlmap/1.7.8#stable (https://sqlmap.org)"
+185.220.101.34 - - [01/Apr/2026:13:22:07 +0000] "GET /view?id=1+UNION+SELECT+username,password,3+FROM+users-- HTTP/1.1" 500 287 "-" "sqlmap/1.7.8#stable (https://sqlmap.org)"
+
+# [SCENARIO 6 — MEDIUM] Nikto web vulnerability scan
+172.16.254.1 - - [01/Apr/2026:14:45:11 +0000] "GET /cgi-bin/test.cgi HTTP/1.1" 404 209 "-" "Mozilla/5.00 (Nikto/2.1.6) (Evasions:None) (Test:001425)"
+172.16.254.1 - - [01/Apr/2026:14:45:12 +0000] "GET /.git/config HTTP/1.1" 404 209 "-" "Mozilla/5.00 (Nikto/2.1.6) (Evasions:None) (Test:001426)"
+172.16.254.1 - - [01/Apr/2026:14:45:13 +0000] "GET /phpinfo.php HTTP/1.1" 404 209 "-" "Mozilla/5.00 (Nikto/2.1.6) (Evasions:None) (Test:001427)"
+172.16.254.1 - - [01/Apr/2026:14:45:14 +0000] "GET /wp-login.php HTTP/1.1" 404 209 "-" "Mozilla/5.00 (Nikto/2.1.6) (Evasions:None) (Test:001428)"
+172.16.254.1 - - [01/Apr/2026:14:45:15 +0000] "GET /admin/config.php HTTP/1.1" 404 209 "-" "Mozilla/5.00 (Nikto/2.1.6) (Evasions:None) (Test:001429)"
+172.16.254.1 - - [01/Apr/2026:14:45:16 +0000] "GET /server-status HTTP/1.1" 403 287 "-" "Mozilla/5.00 (Nikto/2.1.6) (Evasions:None) (Test:001430)"
+172.16.254.1 - - [01/Apr/2026:14:45:17 +0000] "GET /.env HTTP/1.1" 404 209 "-" "Mozilla/5.00 (Nikto/2.1.6) (Evasions:None) (Test:001431)"
+
+# [SCENARIO 7 — HIGH] Path traversal + admin probing from 91.108.56.22
+91.108.56.22 - - [01/Apr/2026:15:30:01 +0000] "GET /download?file=../../../etc/passwd HTTP/1.1" 400 187 "-" "python-requests/2.31.0"
+91.108.56.22 - - [01/Apr/2026:15:30:02 +0000] "GET /view?path=../../../../windows/system32/config/sam HTTP/1.1" 400 187 "-" "python-requests/2.31.0"
+91.108.56.22 - - [01/Apr/2026:15:30:03 +0000] "GET /static/../../../etc/shadow HTTP/1.1" 400 187 "-" "python-requests/2.31.0"
+91.108.56.22 - - [01/Apr/2026:15:30:04 +0000] "GET /images/../admin/config.php HTTP/1.1" 403 209 "-" "python-requests/2.31.0"
+91.108.56.22 - - [01/Apr/2026:15:30:10 +0000] "GET /admin HTTP/1.1" 403 209 "-" "python-requests/2.31.0"
+91.108.56.22 - - [01/Apr/2026:15:30:11 +0000] "GET /phpmyadmin HTTP/1.1" 404 209 "-" "python-requests/2.31.0"
+91.108.56.22 - - [01/Apr/2026:15:30:12 +0000] "GET /wp-admin HTTP/1.1" 404 209 "-" "python-requests/2.31.0"
+91.108.56.22 - - [01/Apr/2026:15:30:13 +0000] "GET /administrator HTTP/1.1" 404 209 "-" "python-requests/2.31.0"
+91.108.56.22 - - [01/Apr/2026:15:30:14 +0000] "GET /manager/html HTTP/1.1" 404 209 "-" "python-requests/2.31.0"
+91.108.56.22 - - [01/Apr/2026:15:30:15 +0000] "GET /cpanel HTTP/1.1" 404 209 "-" "python-requests/2.31.0"
+
+# ─── Windows Security Event Log entries ──────────────────────────────────────
+
+# [NORMAL] Legitimate Windows logins
+2026-04-01 08:05:11 | EventID: 4624 | Account: jsmith | Source IP: 10.10.1.30 | Dest Port: 445 | Computer: DC01 | Result: Audit Success
+2026-04-01 08:22:33 | EventID: 4624 | Account: mjones | Source IP: 10.10.1.31 | Dest Port: 445 | Computer: DC01 | Result: Audit Success
+2026-04-01 09:00:00 | EventID: 4624 | Account: svcBackup | Source IP: 10.10.1.10 | Dest Port: 445 | Computer: FS01 | Result: Audit Success
+2026-04-01 09:14:22 | EventID: 4624 | Account: hrodriguez | Source IP: 10.10.1.44 | Dest Port: 3389 | Computer: WS-HR01 | Result: Audit Success
+
+# [SCENARIO 8 — HIGH] Windows brute force from 198.51.100.200 via SMB
+2026-04-01 17:33:01 | EventID: 4625 | Account: administrator | Source IP: 198.51.100.200 | Dest Port: 445 | Computer: DC01 | Result: Audit Failure
+2026-04-01 17:33:03 | EventID: 4625 | Account: admin | Source IP: 198.51.100.200 | Dest Port: 445 | Computer: DC01 | Result: Audit Failure
+2026-04-01 17:33:05 | EventID: 4625 | Account: Administrator | Source IP: 198.51.100.200 | Dest Port: 445 | Computer: DC01 | Result: Audit Failure
+2026-04-01 17:33:07 | EventID: 4625 | Account: sysadmin | Source IP: 198.51.100.200 | Dest Port: 445 | Computer: DC01 | Result: Audit Failure
+2026-04-01 17:33:09 | EventID: 4625 | Account: root | Source IP: 198.51.100.200 | Dest Port: 445 | Computer: DC01 | Result: Audit Failure
+2026-04-01 17:33:11 | EventID: 4625 | Account: superuser | Source IP: 198.51.100.200 | Dest Port: 445 | Computer: DC01 | Result: Audit Failure
+2026-04-01 17:33:13 | EventID: 4625 | Account: backup | Source IP: 198.51.100.200 | Dest Port: 445 | Computer: DC01 | Result: Audit Failure
+
+# [SCENARIO 9 — MEDIUM] Suspicious privilege assignment to temp account
+2026-04-01 17:45:22 | EventID: 4672 | Account: tempuser | Source IP: 10.10.1.45 | Dest Port: 445 | Computer: DC01 | Result: Audit Success
+2026-04-01 17:45:23 | EventID: 4673 | Account: tempuser | Source IP: 10.10.1.45 | Dest Port: 445 | Computer: DC01 | Result: Audit Success
+
+# [SCENARIO 10 — HIGH] Port scan from 104.21.45.67 (Windows Firewall EventID 5156)
+2026-04-01 19:00:01 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 21 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:02 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 22 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:02 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 23 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:03 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 25 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:03 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 80 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:04 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 443 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:04 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 3306 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:05 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 3389 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:05 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 5432 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:06 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 6379 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:06 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 8080 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:07 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 8443 | Computer: EDGE01 | Result: Permitted
+2026-04-01 19:00:07 | EventID: 5156 | Account: SYSTEM | Source IP: 104.21.45.67 | Dest Port: 27017 | Computer: EDGE01 | Result: Permitted
+
+# [SCENARIO 11 — MEDIUM] Off-hours Windows RDP login from external IP
+2026-04-02 02:30:15 | EventID: 4624 | Account: helpdesk | Source IP: 185.220.101.100 | Dest Port: 3389 | Computer: ADMIN01 | Result: Audit Success
+
+# [NORMAL] End of day logoff events
+2026-04-01 17:58:44 | EventID: 4634 | Account: jsmith | Source IP: 10.10.1.30 | Dest Port: 445 | Computer: DC01 | Result: Audit Success
+2026-04-01 18:02:12 | EventID: 4634 | Account: mjones | Source IP: 10.10.1.31 | Dest Port: 445 | Computer: DC01 | Result: Audit Success
+2026-04-01 18:15:09 | EventID: 4634 | Account: hrodriguez | Source IP: 10.10.1.44 | Dest Port: 3389 | Computer: WS-HR01 | Result: Audit Success
